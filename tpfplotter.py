@@ -63,7 +63,9 @@ def cli():
     parser.add_argument("--gmag", default=None, help="Gaia mag")
     parser.add_argument("--sradius", default=10., type=float, help="Search radius (in arcsec) for the get_gaia_data function")
     parser.add_argument("--legend", default='best', help="Legend location")
-	parser.add_argument("--bjd", default=None, type=float, help="Specific BJD/BTJD time to plot (default: mean of all frames)")
+	parser.add_argument("--bjd", default='best', type=float, help="specific time to plot. default is mean")
+	
+	
     args = parser.parse_args()
     return args
 
