@@ -63,6 +63,7 @@ def cli():
     parser.add_argument("--gmag", default=None, help="Gaia mag")
     parser.add_argument("--sradius", default=10., type=float, help="Search radius (in arcsec) for the get_gaia_data function")
     parser.add_argument("--legend", default='best', help="Legend location")
+	parser.add_argument("--bjd", default=None, type=float, help="Specific BJD/BTJD time to plot (default: mean of all frames)")
     args = parser.parse_args()
     return args
 
@@ -130,7 +131,19 @@ def plot_orientation(tpf):
     tpf read from lightkurve
 
 	"""
-	mean_tpf = np.mean(tpf.flux,axis=0)
+	# mean_tpf = np.mean(tpf.flux,axis=0)
+	# Select flux frame based on BJD or use mean
+	if args.bjd is not None:
+    	times = tpf.time.btjd
+    # Convert to BTJD if full BJD was given
+    	target_bjd = args.bjd - 2457000 if args.bjd > 2450000 else args.bjd
+    	idx = np.argmin(np.abs(times - target_bjd))
+   		actual_btjd = times[idx]
+   		print(f"    --> Using frame at BTJD {actual_btjd:.4f} (requested: {target_bjd:.4f})")
+    	mean_tpf = tpf.flux.value[idx]
+	else:
+    	mean_tpf = np.nanmean(tpf.flux.value, axis=0)
+
 	nx,ny = np.shape(mean_tpf)
 	x0,y0 = tpf.column+int(0.2*nx)+0.5,tpf.row+int(0.2*ny)+0.5
 	# East
@@ -488,7 +501,11 @@ if __name__ == "__main__":
         elif bool(args.name[tt]) is not False:
             plt.title(args.name[tt] +' - Sector '+str(tpf.sector), fontsize=16, zorder=200)
         else:   												#
-            plt.title('TIC '+tic+' - Sector '+str(tpf.sector), fontsize=16, zorder=200)# + ' - Camera '+str(tpf.camera))
+            # plt.title('TIC '+tic+' - Sector '+str(tpf.sector), fontsize=16, zorder=200)# + ' - Camera '+str(tpf.camera))
+			if args.bjd is not None:
+   				plt.title('TIC '+tic+' - Sector '+str(tpf.sector)+f' - BTJD {actual_btjd:.2f}', fontsize=14, zorder=200)
+			else:
+    			plt.title('TIC '+tic+' - Sector '+str(tpf.sector), fontsize=16, zorder=200)
 
         # Colorbar
         cbax = plt.subplot(gs[0,1]) # Place it where it should be.
