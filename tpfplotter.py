@@ -63,9 +63,8 @@ def cli():
     parser.add_argument("--gmag", default=None, help="Gaia mag")
     parser.add_argument("--sradius", default=10., type=float, help="Search radius (in arcsec) for the get_gaia_data function")
     parser.add_argument("--legend", default='best', help="Legend location")
-	parser.add_argument("--bjd", default='best', type=float, help="specific time to plot. default is mean")
-	
-	
+    parser.add_argument("--bjd", default=None, type=float, help="Specific BJD/BTJD time to plot (default: mean of all frames)")
+    
     args = parser.parse_args()
     return args
 
@@ -125,53 +124,54 @@ def add_gaia_figure_elements(tpf, magnitude_limit=18,targ_mag=10.,gaia_id=None):
 
 # Plot orientation
 def plot_orientation(tpf):
-	"""
+    """
     Plot the orientation arrows
 
     Returns
     -------
     tpf read from lightkurve
 
-	"""
-	# mean_tpf = np.mean(tpf.flux,axis=0)
-	# Select flux frame based on BJD or use mean
-	if args.bjd is not None:
-    	times = tpf.time.btjd
+    """
+    # mean_tpf = np.mean(tpf.flux,axis=0)
+    # Select flux frame based on BJD or use mean
+    actual_btjd = None
+    if args.bjd is not None:
+        times = tpf.time.btjd
     # Convert to BTJD if full BJD was given
-    	target_bjd = args.bjd - 2457000 if args.bjd > 2450000 else args.bjd
-    	idx = np.argmin(np.abs(times - target_bjd))
-   		actual_btjd = times[idx]
-   		print(f"    --> Using frame at BTJD {actual_btjd:.4f} (requested: {target_bjd:.4f})")
-    	mean_tpf = tpf.flux.value[idx]
-	else:
-    	mean_tpf = np.nanmean(tpf.flux.value, axis=0)
+        target_bjd = args.bjd - 2457000 if args.bjd > 2450000 else args.bjd
+        idx = np.argmin(np.abs(times - target_bjd))
+        actual_btjd = times[idx]
+        print(f"    --> Using frame at BTJD {actual_btjd:.4f} (requested: {target_bjd:.4f})")
+        mean_tpf = tpf.flux.value[idx]
+    else:
+        mean_tpf = np.nanmean(tpf.flux.value, axis=0)
 
-	nx,ny = np.shape(mean_tpf)
-	x0,y0 = tpf.column+int(0.2*nx)+0.5,tpf.row+int(0.2*ny)+0.5
-	# East
-	tmp =  tpf.get_coordinates()
-	ra00, dec00 = tmp[0][0][0][0], tmp[1][0][0][0]
-	ra10,dec10 = tmp[0][0][0][-1], tmp[1][0][0][-1]
+    nx,ny = np.shape(mean_tpf)
+    x0,y0 = tpf.column+int(0.2*nx)+0.5,tpf.row+int(0.2*ny)+0.5
+    # East
+    tmp =  tpf.get_coordinates()
+    ra00, dec00 = tmp[0][0][0][0], tmp[1][0][0][0]
+    ra10,dec10 = tmp[0][0][0][-1], tmp[1][0][0][-1]
     # Each degree of RA is not a full degree on the sky if not
     # at equator; need cos(dec) factor to compensate
-	cosdec = np.cos(np.deg2rad(0.5*(dec10+dec00)))
+    cosdec = np.cos(np.deg2rad(0.5*(dec10+dec00)))
     # Reverse the order of RA arguments here relative to dec
     # args to account for handedness of RA/Dec vs. x/y coords:
-	theta = np.arctan((dec10-dec00)/(cosdec*(ra00-ra10)))
-	if (ra10-ra00) < 0.0: theta += np.pi
-	#theta = -22.*np.pi/180.
+    theta = np.arctan((dec10-dec00)/(cosdec*(ra00-ra10)))
+    if (ra10-ra00) < 0.0: theta += np.pi
+    #theta = -22.*np.pi/180.
     # If angle is small, arrows can be a bit closer to corner:
-	if (abs(np.rad2deg(theta)) < 30):
-		x0 -= 0.08*nx
-		y0 -= 0.08*ny
-	x1, y1 = 1.*np.cos(theta), 1.*np.sin(theta)
-	plt.arrow(x0,y0,x1,y1,head_width=0.2,color='white')
-	plt.text(x0+1.6*x1,y0+1.6*y1,'E',color='white',ha='center',va='center')
-	# North
-	theta = theta +90.*np.pi/180.
-	x1, y1 = 1.*np.cos(theta), 1.*np.sin(theta)
-	plt.arrow(x0,y0,x1,y1,head_width=0.2,color='white')
-	plt.text(x0+1.6*x1,y0+1.6*y1,'N',color='white',ha='center',va='center')
+    if (abs(np.rad2deg(theta)) < 30):
+        x0 -= 0.08*nx
+        y0 -= 0.08*ny
+    x1, y1 = 1.*np.cos(theta), 1.*np.sin(theta)
+    plt.arrow(x0,y0,x1,y1,head_width=0.2,color='white')
+    plt.text(x0+1.6*x1,y0+1.6*y1,'E',color='white',ha='center',va='center')
+    # North
+    theta = theta +90.*np.pi/180.
+    x1, y1 = 1.*np.cos(theta), 1.*np.sin(theta)
+    plt.arrow(x0,y0,x1,y1,head_width=0.2,color='white')
+    plt.text(x0+1.6*x1,y0+1.6*y1,'N',color='white',ha='center',va='center')
 
 
 
@@ -197,7 +197,7 @@ def get_gaia_data(ra, dec, search_radius=10.):
     result = Vizier.query_region(c1, catalog=[gaia_cat],
                                  radius=Angle(search_radius, "arcsec"))
     try:
-    	result = result[gaia_cat]
+        result = result[gaia_cat]
     except:
         print('Not in Gaia '+catID+'. If you know the Gaia ID and Gmag, try the options --gid and --gmag.')
         print('Exiting without finishing...')
@@ -296,11 +296,11 @@ def get_coord(tic):
         # print(catalog_data[0]["GAIA"])
         return ra, dec
     except:
-    	print("ERROR: TIC not found in Simbad")
+        print("ERROR: TIC not found in Simbad")
 
 
 # ======================================
-# 	        MAIN
+#           MAIN
 # ======================================
 
 if __name__ == "__main__":
@@ -502,12 +502,12 @@ if __name__ == "__main__":
             plt.title('Coordinates '+tic+' - Sector '+str(tpf.sector), fontsize=16, zorder=200)# + ' - Camera '+str(tpf.camera))  #
         elif bool(args.name[tt]) is not False:
             plt.title(args.name[tt] +' - Sector '+str(tpf.sector), fontsize=16, zorder=200)
-        else:   												#
+        else:                                                   #
             # plt.title('TIC '+tic+' - Sector '+str(tpf.sector), fontsize=16, zorder=200)# + ' - Camera '+str(tpf.camera))
-			if args.bjd is not None:
-   				plt.title('TIC '+tic+' - Sector '+str(tpf.sector)+f' - BTJD {actual_btjd:.2f}', fontsize=14, zorder=200)
-			else:
-    			plt.title('TIC '+tic+' - Sector '+str(tpf.sector), fontsize=16, zorder=200)
+            if args.bjd is not None:
+                plt.title('TIC '+tic+' - Sector '+str(tpf.sector)+' - BTJD '+str(round(args.bjd,2)), fontsize=14, zorder=200)
+            else:
+                plt.title('TIC '+tic+' - Sector '+str(tpf.sector), fontsize=16, zorder=200)
 
         # Colorbar
         cbax = plt.subplot(gs[0,1]) # Place it where it should be.
@@ -524,7 +524,7 @@ if __name__ == "__main__":
         exponent = r'$\times 10^'+str(division)+'$'
         cb.set_label(r'Flux '+exponent+r' (e$^-$/s)', labelpad=10, fontsize=16)
 
-        plt.savefig('TPF_Gaia_TIC'+tic+'_S'+str(tpf.sector)+'.pdf')
+        plt.savefig('TPF_Gaia_TIC'+tic+'_S'+str(tpf.sector)+'.pdf', transparent=True)
         plt.close()
         print('\t --> TPF plot written in file: '+'TPF_Gaia_TIC'+tic+'_S'+str(tpf.sector)+'.pdf')
 
