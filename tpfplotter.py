@@ -417,7 +417,7 @@ if __name__ == "__main__":
         nx,ny = np.shape(mean_tpf)
         norm = ImageNormalize(stretch=stretching.LogStretch())
         division = int(np.log10(np.nanmax(np.nanmean(tpf.flux.value ,axis=0)))) #* u.s/u.electron
-        image = np.nanmean(tpf.flux,axis=0)/10**division
+        image = np.log10(np.nanmean(tpf.flux.value,axis=0))
         splot = plt.imshow(image.value,norm=norm, \
                         extent=[tpf.column+0.5,tpf.column+ny+0.5,tpf.row+0.5,tpf.row+nx+0.5],origin='lower', zorder=0)
 
@@ -473,7 +473,7 @@ if __name__ == "__main__":
             plt.scatter(0,0,s=size,c='red',alpha=0.6, edgecolor=None,
                         zorder = 10,label = r'$\Delta m=$ '+str(int(f-mag)))
 
-        ax1.legend(fancybox=True, framealpha=0.7, loc=args.legend,fontsize=14)
+        ax1.legend(fancybox=True, framealpha=0.7, loc='upper left', bbox_to_anchor=(1.05, 1), fontsize=14)
 
         # Source labels
         dist = np.sqrt((x-x[this])**2+(y-y[this])**2)
@@ -524,6 +524,8 @@ if __name__ == "__main__":
         exponent = r'$\times 10^'+str(division)+'$'
         cb.set_label(r'Flux '+exponent+r' (e$^-$/s)', labelpad=10, fontsize=16)
 
+        fig.patch.set_alpha(0)
+        plt.gca().patch.set_alpha(0)
         plt.savefig('TPF_Gaia_TIC'+tic+'_S'+str(tpf.sector)+'.pdf', transparent=True)
         plt.close()
         print('\t --> TPF plot written in file: '+'TPF_Gaia_TIC'+tic+'_S'+str(tpf.sector)+'.pdf')
